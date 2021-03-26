@@ -1,4 +1,4 @@
-# Socket.io : Chat
+# Socket.io : Chat Fait avec Théo Bernardin
 
 Cette application reprend les sources du tutoriel présent sur le blog [bini.io](http://blog.bini.io) :
 
