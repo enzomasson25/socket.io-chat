@@ -3,6 +3,18 @@ var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var i;
+var usersConnected;
+const redis = require("redis");
+const client = redis.createClient();
+var alert = require('alert');
+
+client.on("error", function(error) {
+  console.error(error);
+});
+
+client.on("ready", function(error) {
+  console.log("Connected to redis")
+});
 
 /**
  * Gestion des requêtes HTTP des utilisateurs en leur renvoyant les fichiers du dossier 'public'
@@ -53,6 +65,11 @@ io.on('connection', function (socket) {
    * Déconnexion d'un utilisateur
    */
   socket.on('disconnect', function () {
+    
+    client.lrem("users", 1 , loggedUser.username, function(err, reply) {
+      console.log(loggedUser.username + " s'est deconnecté")
+    });
+
     if (loggedUser !== undefined) {
       // Broadcast d'un 'service-message'
       var serviceMessage = {
@@ -81,6 +98,13 @@ io.on('connection', function (socket) {
    * Connexion d'un utilisateur via le formulaire :
    */
   socket.on('user-login', function (user, callback) {
+
+    client.sadd('allUsers', user.username, function(err, reply) {
+      if (reply==1){
+        console.log("Hello to this new users : "+user.username)
+      }
+    });
+
     // Vérification que l'utilisateur n'existe pas
     var userIndex = -1;
     for (i = 0; i < users.length; i++) {
@@ -88,8 +112,17 @@ io.on('connection', function (socket) {
         userIndex = i;
       }
     }
+
     if (user !== undefined && userIndex === -1) { // S'il est bien nouveau
       // Sauvegarde de l'utilisateur et ajout à la liste des connectés
+      //if the user isnt connected
+
+      //add user connected on redis
+      client.lpush('users', user.username, function(err, reply) {
+      console.log(user.username + " s'est connecté")
+      console.log("Il y a " + reply + " personnes connecté(s)")
+      });
+      
       loggedUser = user;
       users.push(loggedUser);
       // Envoi et sauvegarde des messages de service
@@ -108,6 +141,7 @@ io.on('connection', function (socket) {
       io.emit('user-login', loggedUser);
       callback(true);
     } else {
+      alert("You are already connected")
       callback(false);
     }
   });
@@ -122,6 +156,22 @@ io.on('connection', function (socket) {
     message.type = 'chat-message';
     io.emit('chat-message', message);
     // Sauvegarde du message
+
+    //incrementer le nombre de message du user de 1 
+    client.sismember('allUsers',loggedUser.username, function(error,reply){
+      if(reply==1){// si il existe alors incrémenter
+        client.incr(loggedUser.username)
+        client.get(loggedUser.username,function(error,reply){ //affiche le nombre de message qu'il a posté
+          console.log("C'est le "+reply+"ème message de "+loggedUser.username);
+        });
+      }
+      else{ // sinon créer la key
+        client.set(loggedUser.username,1);
+        console.log(loggedUser.username + " a posté son premier message !");
+      }
+    });
+
+
     messages.push(message);
     if (messages.length > 150) {
       messages.splice(0, 1);
