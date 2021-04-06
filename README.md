@@ -54,11 +54,11 @@ L'application est désormais accesssible à l'url **http://localhost:3000/**.
 Nous allons créer 1 serveur primary et deux serveurs secondary qui vont permettrent la replication des données. Pour ce faire on créer 3 dossiers R0S1, R0S2 , R0S3 dans le repertoire data. Ensuite on effectue les commandes suivante pour lancer les replicaset sur différents port.
 
 ```
-mongod --replSet rs0 --port 27018 --dbpath ./data/R0S1
+mongod --replSet rs0 --port 27018 --dbpath ./data/RS01
 
-mongod --replSet rs0 --port 27019 --dbpath ./data/R0S2
+mongod --replSet rs1 --port 27019 --dbpath ./data/RS02
 
-mongod --replSet rs0 --port 27020 --dbpath ./data/R0S3
+mongod --replSet rs2 --port 27020 --dbpath ./data/RS03
 ```
 
 On se connecte ensuite au port 27018 qui est le serveur principale pour connecter les replicasets
@@ -74,6 +74,8 @@ il suffit d’exécuter la commande rs.addArb(‘localhost :3000’) dans le cli
 
 Voici le resultat de ces commandes : 
 <img width="1432" alt="Capture d’écran 2021-04-06 à 19 08 33" src="https://user-images.githubusercontent.com/47392406/113752286-12295600-970d-11eb-8042-a5f9c742bcb8.png">
+
+(On voit une erreur lors de la création de l'arborescence des réplicas, je m'étais trompé de numéro de port sur mes réplicats, une erreur que j'ai régler mais j'ai oublié de reprendre un screen)
 
 
 # Stockage des messages dans MangoDB
