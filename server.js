@@ -1,3 +1,4 @@
+var mongoose = require('mongoose');
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
@@ -6,7 +7,37 @@ var i;
 var usersConnected;
 const redis = require("redis");
 const client = redis.createClient();
+client.del("users") // We want a fresh new list!
+
 var alert = require('alert');
+
+mongoose.set('useNewUrlParser', true)
+mongoose.set('useFindAndModify', false)
+mongoose.set('useCreateIndex', true)
+mongoose.connect('mongodb://localhost:27017/test', {useNewUrlParser: true, useUnifiedTopology: true})
+
+
+
+const Message = mongoose.model('Message', new mongoose.Schema({
+  text: {
+    type: String,
+    required: true
+  },
+  username: String,
+  date: {
+    type: Date,
+    default: Date.now,
+    index: 1
+  },
+  type: {
+    type: String,
+    enum : ['chat','service', 'login', 'logout'],
+    default: 'chat'
+  },
+}))
+
+
+
 
 client.on("error", function(error) {
   console.error(error);
@@ -36,24 +67,15 @@ var messages = [];
  */
 var typingUsers = [];
 
-io.on('connection', function (socket) {
 
-  /**
-   * Utilisateur connecté à la socket
-   */
-  var loggedUser;
-
+const initUser = async socket => {
   /**
    * Emission d'un événement "user-login" pour chaque utilisateur connecté
    */
-  for (i = 0; i < users.length; i++) {
-    socket.emit('user-login', users[i]);
-  }
-
   /** 
    * Emission d'un événement "chat-message" pour chaque message de l'historique
    */
-  for (i = 0; i < messages.length; i++) {
+   for (i = 0; i < messages.length; i++) {
     if (messages[i].type === 'chat-message') {
       socket.emit('chat-message', messages[i]);
     } else {
@@ -62,28 +84,53 @@ io.on('connection', function (socket) {
   }
 
   /**
+   * Emission d'un événement "chat-message" pour chaque message de l'historique
+   */
+  // TODO check if user is connected (redis) and skip this part
+  const dbMessages = await Message.find({}).sort({date: -1}).limit(50)
+  dbMessages.reverse().forEach(message => {
+    if (message.type === 'chat') socket.emit('chat-message', message)
+    else socket.emit('service', message)
+  })
+}
+
+
+io.on('connection', function (socket) {
+
+  /**
+   * Utilisateur connecté à la socket
+   */
+  var loggedUser;
+
+
+  initUser(socket).catch(console.error)
+
+
+  /**
+   * Emission d'un événement "user-login" pour chaque utilisateur connecté
+   */
+  for (i = 0; i < users.length; i++) {
+    socket.emit('user-login', users[i]);
+  }
+
+  /**
    * Déconnexion d'un utilisateur
    */
-  socket.on('disconnect', function () {
-    
-    client.lrem("users", 1 , loggedUser.username, function(err, reply) {
-      console.log(loggedUser.username + " s'est deconnecté")
-    });
-
+   socket.on('disconnect', async () => {
     if (loggedUser !== undefined) {
       // Broadcast d'un 'service-message'
       var serviceMessage = {
         text: 'User "' + loggedUser.username + '" disconnected',
-        type: 'logout'
+        type: 'logout',
       };
       socket.broadcast.emit('service-message', serviceMessage);
       // Suppression de la liste des connectés
-      var userIndex = users.indexOf(loggedUser);
-      if (userIndex !== -1) {
-        users.splice(userIndex, 1);
-      }
+      client.lrem("users", userIndex, loggedUser.username, function (err,reply){
+        console.log(loggedUser.username  + " s'est déconnecté")
+      })
+
       // Ajout du message à l'historique
-      messages.push(serviceMessage);
+      await Message.create(serviceMessage)
       // Emission d'un 'user-logout' contenant le user
       io.emit('user-logout', loggedUser);
       // Si jamais il était en train de saisir un texte, on l'enlève de la liste
@@ -97,7 +144,7 @@ io.on('connection', function (socket) {
   /**
    * Connexion d'un utilisateur via le formulaire :
    */
-  socket.on('user-login', function (user, callback) {
+   socket.on('user-login', function (user, callback) {
 
     client.sadd('allUsers', user.username, function(err, reply) {
       if (reply==1){
@@ -149,7 +196,14 @@ io.on('connection', function (socket) {
   /**
    * Réception de l'événement 'chat-message' et réémission vers tous les utilisateurs
    */
-  socket.on('chat-message', function (message) {
+  socket.on('chat-message', async(message) => {
+
+    // Sauvegarde du message
+    await Message.create({
+      text: message.text,
+      username: loggedUser.username
+    })
+
     // On ajoute le username au message et on émet l'événement
     message.username = loggedUser.username;
     // On assigne le type "message" à l'objet
