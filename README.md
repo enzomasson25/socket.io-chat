@@ -76,3 +76,19 @@ Voici le resultat de ces commandes :
 <img width="1432" alt="Capture d’écran 2021-04-06 à 19 08 33" src="https://user-images.githubusercontent.com/47392406/113752286-12295600-970d-11eb-8042-a5f9c742bcb8.png">
 
 
+# Stockage des messages dans MangoDB
+
+A l'émission d'un message sur le tchat, celui-ci est archivé dans notre base de donnée MongoDB. Nous utilisons les schémas mongoose pour créer nos objets messages et pour les stocker dans notre base de données depuis le front-end de notre app. 
+
+## Voici le résultat : 
+
+Sur l'app : 
+
+![Capture d’écran 2021-04-06 à 20 19 49](https://user-images.githubusercontent.com/47392406/113759805-ccbd5680-9715-11eb-891e-7191e3416dc8.png)
+
+
+Dans la base de données : 
+
+<img width="892" alt="Capture d’écran 2021-04-06 à 20 19 11" src="https://user-images.githubusercontent.com/47392406/113759842-d941af00-9715-11eb-89e1-384f1f9f8017.png">
+
+
