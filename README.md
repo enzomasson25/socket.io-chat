@@ -43,10 +43,10 @@ L'application est désormais accesssible à l'url **http://localhost:3000/**.
 
 # Rajout des fonctionalités
 
-Utilisateurs et stockage ✅
-Connaître quels sont les utilisateurs connectés et les afficher (en utilisant Redis) ✅
-Stocker l'ensemble des messages dans MongoDB ✅
-Utiliser le ReplicaSet pour permettre une meilleure tolérance aux pannes.✅
+* Utilisateurs et stockage ✅
+* Connaître quels sont les utilisateurs connectés et les afficher (en utilisant Redis) ✅
+* Stocker l'ensemble des messages dans MongoDB ✅
+* Utiliser le ReplicaSet pour permettre une meilleure tolérance aux pannes.✅
 
 
 # Mise en place des replicaset 
